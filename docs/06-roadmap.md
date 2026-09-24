@@ -1,243 +1,229 @@
 # Project Roadmap
 
-## Phase 0 — Research and gap validation
+## Phase 0A — Raw-sensor feasibility
 
 ### Goal
 
-Prove that the narrowed OpenTouch product gap is real and identify at least one credible hardware path.
+Prove that at least one commercial fingerprint sensor can support an open OpenTouch controller stack.
 
-### Milestones
+### M0A.1 — Sensor market scan
 
-#### M0.1 — Freeze product thesis
+Investigate exact candidate parts from:
 
-**Done when:**
+- Fingerprint Cards;
+- Goodix;
+- other credible sensor vendors.
 
-- product is explicitly defined as tiny / Linux-first / upstream / USB-C / preferably MOC;
-- project documentation acknowledges existing Linux-first readers;
-- FIDO2 biometric authenticators are explicitly separated from fprint/PAM readers.
+For each candidate determine:
 
-**Status:** complete for initial research pass.
+- raw-image/low-level access;
+- SPI/register documentation;
+- SDK requirements;
+- NDA constraints;
+- firmware/blob requirements;
+- sample availability;
+- MOQ;
+- pricing;
+- lifecycle.
 
-#### M0.2 — Resolve `3274:8012`
+### M0A.2 — Select development sensor
 
-Determine:
+**Exit criterion:** one sensor is sufficiently open and sourceable to justify PCB/controller development.
 
-- exact manufacturer/module identity;
-- retail implementations;
-- upstream driver path;
-- released-driver availability;
-- Fedora packaged availability;
-- module documentation;
-- sourcing;
-- MOQ/pricing;
-- security architecture;
-- VID/PID policy.
+### M0A.3 — Acquire benchmark `3274:8012`
 
-**Exit criterion:** enough evidence to decide whether `3274:8012` is:
-- only a proof-of-concept donor;
-- a credible v1 production module;
-- or a dead end.
+Optional but recommended.
 
-**Status:** **NEXT ACTION.**
+Purpose:
 
-#### M0.3 — Identify second-source candidate
+- user-experience baseline;
+- latency comparison;
+- physical-size benchmark;
+- Linux integration reference.
 
-At least one independent alternative should be characterized well enough to avoid dependence on a single opaque vendor.
-
-Candidates include NEXT, FocalTech, Goodix, ELAN, or another exact upstream-supported module.
-
-### Phase-0 gate
-
-Do not start a custom PCB until at least one candidate has:
-
-- stable identity;
-- viable sourcing;
-- electrical/mechanical information;
-- understood USB integration terms.
+It is not the target architecture.
 
 ---
 
-## Phase 1 — Legatum software prototype
+## Phase 0B — Security/data architecture
 
 ### Goal
 
-Prove the exact hardware works acceptably through the normal Fedora/fprint stack.
+Define where biometric data lives before production firmware is designed.
+
+Resolve:
+
+- host vs device matching;
+- template storage;
+- root-key location;
+- encrypted host blobs vs device NVM;
+- portability vs host binding;
+- enrollment authorization;
+- reset/recovery;
+- firmware trust.
+
+Artifact:
+
+- `docs/09-biometric-data-architecture.md`
+- architecture decision record(s)
+
+---
+
+## Phase 1 — Sensor development platform
+
+### Goal
+
+Capture usable fingerprint images from the chosen raw sensor.
 
 ### Actions
 
-- acquire exact known-VID:PID hardware;
-- record USB descriptors;
-- record Fedora/libfprint/fprintd versions;
-- test packaged stack;
-- test upstream stack if packaged support is missing;
-- enroll;
-- verify;
-- GNOME Settings;
-- GDM;
-- lock screen;
-- `sudo`;
-- polkit;
-- multi-user;
-- unplug/replug;
-- boot states;
-- suspend/resume;
-- repeated use;
-- failure recovery.
-
-### Artifacts
-
-- `qualification/<device>/environment.md`
-- `qualification/<device>/usb-descriptors.txt`
-- `qualification/<device>/results.md`
-- scripts needed to reproduce testing;
-- issue log.
+- sensor breakout/dev board;
+- controller development board;
+- power;
+- SPI;
+- reset/interrupt;
+- acquisition firmware;
+- raw-frame capture;
+- image-quality characterization.
 
 ### Exit criterion
 
-A device reaches **qualified prototype** state only if its observed behavior is good enough to justify physical product work.
+Repeatable, stable images from multiple fingers under normal touch conditions.
 
 ---
 
-## Phase 2 — Physical prototype
+## Phase 2 — Linux host-matching prototype
 
 ### Goal
 
-Prove the desired physical product concept.
+Prove end-to-end Linux authentication before implementing embedded matching.
+
+Architecture:
+
+```text
+sensor → OpenTouch controller → USB → libfprint → host matching
+```
 
 ### Actions
 
-- teardown donor if used;
-- identify module markings;
-- inspect PCB;
-- model enclosure;
-- create USB-C mechanical concept;
-- prototype enclosure;
-- validate cable/connector loads;
-- confirm thermal/power behavior.
+- define development USB protocol;
+- implement libfprint imaging driver;
+- enrollment;
+- verification;
+- GNOME/PAM qualification.
 
 ### Exit criterion
 
-A compact enclosure can be built without damaging sensor reliability or making USB integration fragile.
+OpenTouch works as a functional Linux fingerprint reader using host-side biometric processing.
 
 ---
 
-## Phase 3 — Open hardware prototype
+## Phase 3 — OpenTouch controller PCB
 
 ### Goal
 
-Build a reproducible OpenTouch-specific hardware assembly.
+Replace development boards with the intended compact electronics.
 
 ### Actions
 
+- select MCU/SoC;
 - schematic;
 - PCB;
-- USB-C integration;
-- ESD protection;
-- BOM;
-- assembly files;
-- enclosure CAD;
-- programming/test fixtures if required;
-- manufacturing notes;
-- open-source licensing.
-
-### Design rule
-
-Keep the board minimal. Do not add a microcontroller without a demonstrated requirement.
+- USB-C;
+- ESD;
+- sensor connector/integration;
+- debug/programming;
+- prototype enclosure.
 
 ### Exit criterion
 
-Multiple units can be independently assembled from published artifacts and behave identically.
+Compact OpenTouch hardware reproduces Phase-2 behavior.
 
 ---
 
-## Phase 4 — Upstream and distro integration
+## Phase 4 — Device-side biometric engine
 
 ### Goal
 
-Eliminate private software dependencies.
+Move sensitive biometric processing out of Linux.
 
 ### Actions
 
-Only as required:
-
-- libfprint fixes;
-- VID/PID additions;
-- fprintd fixes;
-- regression tests;
-- distro packaging issues;
-- documentation improvements.
+- evaluate matcher;
+- embedded image preprocessing;
+- template generation;
+- template matching;
+- performance optimization;
+- false-reject characterization;
+- secure template representation.
 
 ### Exit criterion
 
-Normal users can use the product through upstream/released distribution software on declared supported systems.
-
-Private forks are not an acceptable product endpoint.
+Normal authentication no longer requires raw biometric data or templates to leave the device.
 
 ---
 
-## Phase 5 — Productization
+## Phase 5 — Secure authenticator architecture
 
 ### Goal
 
-Turn the open hardware prototype into a sellable small-batch device.
+Harden the device.
+
+### Actions
+
+- secure boot;
+- signed updates;
+- anti-rollback;
+- root device key;
+- template encryption;
+- authenticated host protocol;
+- replay resistance;
+- enrollment authorization;
+- secure reset;
+- debug lockdown.
+
+### Exit criterion
+
+Documented security properties are enforced by the implementation rather than assumed.
+
+---
+
+## Phase 6 — Upstream/product qualification
+
+### Actions
+
+- upstream libfprint driver/protocol;
+- fprintd/PAM testing;
+- multi-distro qualification;
+- suspend/resume;
+- multi-user behavior;
+- long-run testing;
+- manufacturing tests.
+
+---
+
+## Phase 7 — Commercial product
 
 ### Actions
 
 - DFM;
-- supplier agreement;
-- production test fixture;
-- incoming inspection;
-- serial/revision tracking;
-- packaging;
+- sourcing;
 - compliance;
-- labeling;
-- warranty policy;
-- support documentation;
-- fulfillment;
+- packaging;
+- QA;
+- warranty;
 - retail pricing;
-- launch channel.
-
-### Exit criterion
-
-A production batch can be built, tested, shipped, and supported without engineering intervention per unit.
+- launch.
 
 ---
 
-## Phase 6 — Optional keyboard integration
+## Phase 8 — Future integrations
 
-### Trigger
+Potential:
 
-Only begin if:
+- keyboard;
+- Legatum local hardware authentication;
+- OEM module;
+- embedded systems.
 
-- standalone OpenTouch is technically validated;
-- sensor sourcing is stable;
-- demand exists;
-- integration value is clearer than simply attaching the standalone device.
-
-The keyboard is explicitly not required for OpenTouch to be a meaningful contribution.
-
----
-
-# Project-level gates
-
-## Gate A — Sensor viability
-
-Can we identify, buy, document, and legally integrate the sensor?
-
-## Gate B — Linux viability
-
-Does the exact hardware behave well through upstream Linux?
-
-## Gate C — Product viability
-
-Can a tiny, robust, consumer-quality physical design be made?
-
-## Gate D — Economic viability
-
-Can the unit be sold at a plausible price with sustainable margin?
-
-## Gate E — Compliance viability
-
-Can the product be sold in target markets without disproportionate certification/legal burden?
-
-A failure at any gate should trigger architecture review rather than sunk-cost continuation.
+These are intentionally downstream of the standalone architecture.

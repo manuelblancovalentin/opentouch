@@ -1,119 +1,94 @@
 # Research Sources
 
-Research snapshot date: **2026-09-24**
+Research snapshot updated: **2026-09-24**
 
-This file records sources supporting the initial feasibility documentation. Where possible, prefer manufacturer, upstream, distribution, standards-body, and statutory sources over reseller/community claims.
+## Apple biometric/security reference
 
-## Upstream Linux
+### Apple — Biometric security
+
+https://support.apple.com/guide/security/sec067eb0c9e/web
+
+Supports:
+
+- separation between biometric sensor and Secure Enclave;
+- Secure Enclave performs template processing/storage/matching;
+- raw raster scan exists temporarily in encrypted Secure Enclave memory and is discarded;
+- enrolled biometric representation is encrypted and device-local;
+- built-in Touch ID sensor↔Secure Enclave channel is encrypted and authenticated;
+- per-sensor provisioned key material participates in establishing session protection.
+
+### Apple — About Touch ID advanced security technology
+
+https://support.apple.com/105095
+
+Supports:
+
+- Touch ID stores a mathematical representation rather than retained fingerprint images;
+- fingerprint data is encrypted;
+- it is protected by keys available only to the Secure Enclave;
+- OS/apps do not get access;
+- data is not sent to Apple or backed up to iCloud.
+
+### Apple — The Secure Enclave
+
+https://support.apple.com/guide/security/sec59b0b31ff/web
+
+Supports:
+
+- Secure Enclave as a hardware-isolated subsystem;
+- secure boot/root-of-trust architecture;
+- hardware cryptography;
+- protected memory;
+- secure nonvolatile/anti-replay mechanisms.
+
+These sources are used as architectural reference only. OpenTouch must not claim equivalence.
+
+## Linux baseline
 
 ### libfprint supported devices
 
 https://fprint.freedesktop.org/supported-devices.html
 
-Supports these repository claims:
+### libfprint developer docs
 
-- `3274:8012` appears in the current development supported-device list.
-- It is identified there as `MAFP MOC Fingerprint Sensor`.
-- The page explicitly warns that development-list support does not imply inclusion in every stable release.
+https://fprint.freedesktop.org/libfprint-dev/
 
-### libfprint developer documentation
-
-https://fprint.freedesktop.org/libfprint-dev/getting-started.html
-
-Supports:
-
-- libfprint performs device discovery and provides enrollment/verification operations.
-
-## Fedora
-
-### Fedora libfprint package
+### Fedora libfprint
 
 https://packages.fedoraproject.org/pkgs/libfprint/libfprint/
 
-Snapshot observation on 2026-09-24:
+## Candidate sensor vendors
 
-- Fedora package pages showed `1.94.100` across Fedora 43–45.
+### Fingerprint Cards
 
-This does **not** alone establish whether a particular device-support patch is included. Driver inclusion must be separately verified.
+https://www.fpc.com/products/fingerprints/
 
-## GNOME
+Published product material for access sensors has historically documented capacitive 508-dpi devices with SPI interfaces. Exact current availability, register documentation, SDK terms, and open-source compatibility must be verified directly before selection.
 
-### Fingerprint login
+### Goodix capacitive fingerprint sensors
 
-https://help.gnome.org/gnome-help/session-fingerprint.html
+https://www.goodix.com/en/product/sensors/fingerprint_sensors/capacitive_fingerprint_sensors
 
-Supports:
+Goodix lists compact capacitive fingerprint sensors, including SPI-connected products. Public product listings do not by themselves prove open raw-frame access or permission to implement an independent driver.
 
-- GNOME provides fingerprint enrollment/login UI for supported hardware;
-- password login remains available.
+## Benchmark MOC device
 
-## Linux-first competitor
+### libfprint `3274:8012`
 
-### ThinkPenguin TPE-F4500
+Use official upstream support/source plus physical testing.
 
-https://www.thinkpenguin.com/gnu-linux/optical-usb-fingerprint-reader-gnulinux-edition-tpe-f4500
+This device remains a benchmark/reference, not the target OpenTouch architecture.
 
-https://thinkpenguin.com/gnu-linux/optical-usb-fingerprint-reader-gnulinux-edition-support-documentation-tpe-f4500
+## Evidence policy
 
-Supports:
+For every hardware claim prefer:
 
-- a purposefully GNU/Linux-oriented external fingerprint reader already exists;
-- it is documented around the fprint ecosystem;
-- it is an optical reader with a conventional desktop-reader product concept.
+1. manufacturer datasheet;
+2. manufacturer engineering response;
+3. upstream source;
+4. authorized distributor;
+5. reproducible teardown/hardware report;
+6. community report;
+7. marketplace description.
 
-This is why OpenTouch must not claim novelty merely from being a Linux fingerprint reader.
-
-## FIDO biometric comparison
-
-### YubiKey C Bio
-
-https://www.yubico.com/product/yubikey-c-bio/
-
-Snapshot observation:
-
-- USB-C biometric FIDO authenticator;
-- listed around $98 on the 2026-09-24 research pass.
-
-Used only as a market/security architecture comparison. It is not a drop-in fprint/PAM reader.
-
-## USB
-
-### USB-IF developer resources
-
-https://www.usb.org/developers
-
-### USB logo/license information
-
-https://www.usb.org/logo-license
-
-Used for:
-
-- VID/PID and USB branding/compliance research;
-- reminder that USB identity and logo rights must not be improvised.
-
-Exact commercial fee schedules should be rechecked at the time of product launch.
-
-## Illinois biometric law
-
-### Illinois Biometric Information Privacy Act
-
-https://www.ilga.gov/legislation/ilcs/fulltext.asp?DocName=074000140K10
-
-Used to motivate local-only biometric architecture and the recommendation that OpenTouch itself avoid collecting fingerprint images/templates.
-
-This repository does not provide legal advice.
-
----
-
-# Evidence rules for future research
-
-When adding a technical claim, tag it mentally according to evidence quality:
-
-1. **Primary** — manufacturer/upstream/standards/statute.
-2. **Strong secondary** — authorized distributor or reproducible teardown.
-3. **Community** — issue/forum/report.
-4. **Marketplace** — seller listing.
-
-Production decisions should not rely solely on levels 3–4.
-
-For hardware compatibility, require exact model/part number and VID:PID whenever possible.
+A production decision must not rely solely on marketplace or forum descriptions.

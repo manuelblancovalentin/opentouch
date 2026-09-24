@@ -1,193 +1,177 @@
-# Hardware Survey and Selection Rules
+# Raw Sensor Survey and Selection Rules
 
-## 1. Selection philosophy
+## 1. New selection objective
 
-The product does not need the most sophisticated fingerprint silicon.
+OpenTouch no longer seeks a complete USB MOC module as its primary architecture.
 
-It needs hardware that is:
+The target component is a **commercial fingerprint sensing IC/module** that exposes fingerprint data through a sufficiently low-level interface such as SPI.
 
-- small;
-- reliable;
-- sourceable;
-- documented;
-- electrically integrable;
-- legally usable;
-- stable across revisions;
-- supported upstream;
-- compatible with consumer product economics.
+The OpenTouch controller will own the authentication architecture above that sensor.
 
-A technically excellent laptop sensor with no practical OEM channel is a poor product choice.
+## 2. Candidate classes
 
-## 2. Current candidate table
+### Fingerprint Cards access sensors
 
-This table is a research register, not a certification of compatibility.
+The FPC1020 / FPC1024 / FPC1025 family is particularly relevant because published material describes:
 
-| Candidate | USB ID | Architecture | Current relevance | Primary concern |
-|---|---|---|---|---|
-| Microarray / MAFP MOC | `3274:8012` | MOC | **Primary v0 lead** | Exact module identity, docs, sourcing, security details |
-| NEXT NB-2020-U | `298d:2020` | USB OEM fingerprint module | Development/reference candidate | Larger than desired final form factor |
-| NEXT NB-1010-U family | `298d:1010` | Fingerprint module | Secondary reference | Older ecosystem |
-| FocalTech FT9365 ESS family | `2808:6553` | MOC | Technically interesting | OEM sourcing/docs |
-| Goodix MOC families | various `27c6:*` | MOC | Broad technical relevance | SKU stability and procurement |
-| ELAN ARM-M4 family | e.g. `04f3:0c9c` | MOC | Research candidate | Laptop/OEM sourcing |
+- capacitive sensing;
+- 508 dpi;
+- grayscale image output;
+- SPI interface;
+- 1.8 V / 3.3 V operation;
+- compact square/round packages intended for embedded access applications.
 
-Do not add “Fedora supported” to any row until the exact hardware has been tested or the exact packaged driver inclusion has been verified.
+These are currently strong Phase-0A candidates.
 
-## 3. `3274:8012`
+### Goodix capacitive SPI sensors
 
-The official libfprint development supported-device list currently identifies:
+Goodix currently lists several capacitive fingerprint sensors with SPI interfaces and compact form factors.
 
-```text
-3274:8012  MAFP MOC Fingerprint Sensor
-```
+Representative candidates include:
 
-This establishes only:
+- GF3988;
+- GF5288;
+- GF3258;
+- GF3626.
 
-- the exact USB ID appears in upstream development support;
-- upstream categorizes it as an MOC fingerprint sensor.
+Exact raw-image access, register documentation, SDK requirements, redistribution terms, and engineering-sample availability must be verified before any selection.
 
-It does **not** by itself establish:
+## 3. Sensor selection gate
 
-- which retail products contain it;
-- the exact underlying Microarray commercial module name;
-- Fedora packaged support;
-- module availability;
-- template-storage guarantees;
-- secure channel;
-- liveness/PAD;
-- stable firmware;
-- OEM pricing;
-- redistribution rights.
+A candidate may only become the OpenTouch sensor if all of the following are answered.
 
-Those are the next research questions.
+### Technical
 
-## 4. Why `3274:8012` leads v0
+- exact part number;
+- sensor resolution;
+- active area;
+- image format;
+- host interface;
+- timing;
+- voltage/current;
+- reset/interrupt behavior;
+- calibration requirements;
+- ESD constraints;
+- cover/coating constraints;
+- documented raw or low-level acquisition path.
 
-The device class appears to match the desired industrial design unusually well:
+### Openness
 
-- compact;
-- touch-style;
-- MOC;
-- native USB device;
-- upstream Linux support exists at least at development level;
-- commercial mini-readers reportedly expose this VID:PID.
+- can OpenTouch initialize the sensor without a proprietary host daemon?
+- can acquisition firmware be independently written?
+- are register/interface docs available?
+- is a binary blob required?
+- may OpenTouch publish source code for the interface?
+- do NDA terms prohibit an open implementation?
 
-That makes it a strong **proof-of-concept target** even if it ultimately fails as the production component.
+### Sourcing
 
-## 5. NEXT NB-2020-U role
-
-The NEXT NB-2020-U is interesting because OEM-oriented modules traditionally provide a clearer integration path than anonymous consumer dongles.
-
-Its value may therefore be as:
-
-- a reference platform;
-- an independently supported second sensor;
-- a debugging control;
-- a comparison point for driver vs sensor problems.
-
-It need not be the final product sensor.
-
-## 6. Hardware evidence hierarchy
-
-Use this order of confidence.
-
-### Tier 1 — authoritative
-
-- manufacturer datasheet;
-- manufacturer product page;
-- manufacturer engineering correspondence;
-- upstream source/merge request;
-- official USB descriptors collected from hardware.
-
-### Tier 2 — strong secondary
-
-- established distributor listing with manufacturer part number;
-- teardown showing marked silicon;
-- reproducible community hardware report with `lsusb`.
-
-### Tier 3 — weak
-
-- marketplace title;
-- reseller description without part number;
-- “works with Linux” claim;
-- visual similarity;
-- same enclosure as a known device.
-
-OpenTouch must not base production decisions on Tier-3 evidence.
-
-## 7. Required fields before selecting a v1 sensor
-
-For each serious candidate collect:
-
-- manufacturer;
-- exact manufacturer part number;
-- module/sensor name;
-- USB VID:PID;
-- USB class/protocol behavior;
-- MOC vs host matching;
-- physical dimensions;
-- active sensing area;
-- supply voltage/current;
-- connector/pinout;
-- datasheet;
-- mechanical drawing;
-- lifecycle status;
-- firmware update mechanism;
-- template storage model;
-- raw-image exposure;
-- secure-channel behavior;
-- PAD/liveness claims;
-- upstream libfprint driver;
-- first supported libfprint version;
-- Fedora packaged support;
-- sample pricing;
-- 10 / 100 / 1k pricing;
+- prototype samples;
+- distributor;
 - MOQ;
+- 10 / 100 / 1k pricing;
 - lead time;
-- authorized sourcing channel;
-- VID/PID integration terms;
-- NDA requirements;
-- redistribution restrictions.
+- lifecycle status;
+- PCN/EOL policy.
 
-## 8. Product architecture preference
+### Security
 
-Preferred v1 architecture:
+The raw sensor itself need not store templates.
+
+Instead determine whether it has:
+
+- unique identity/key material;
+- authenticated transport capability;
+- firmware;
+- sensor pairing requirements;
+- anti-tamper or PAD features.
+
+OpenTouch must not assume any of these.
+
+## 4. Hardware architecture preference
+
+Initial development:
 
 ```text
-OEM MOC fingerprint module
-        ↓ native USB if available
-minimal carrier PCB
-        ↓
-USB-C + CC resistors + ESD/power protection
-        ↓
-host
+raw fingerprint sensor
+        ↓ SPI
+OpenTouch controller
+        ↓ USB-C
+Linux
 ```
 
-Avoid adding an MCU unless there is a demonstrated requirement.
+The first controller prototype may use host-side matching to de-risk acquisition.
 
-Every additional controller introduces:
+Target production architecture:
 
-- firmware;
-- update mechanisms;
-- attack surface;
-- USB identity complexity;
-- manufacturing complexity;
-- new failure modes.
+```text
+raw fingerprint sensor
+        ↓
+OpenTouch controller
+        ├── preprocessing
+        ├── template generation
+        ├── matching
+        ├── secure template storage
+        ├── secure boot
+        ├── signed updates
+        └── authenticated host protocol
+        ↓
+USB-C
+        ↓
+Linux
+```
 
-## 9. Donor-reader warning
+## 5. Controller requirements
 
-A donor product is acceptable for Phase 1.
+The controller choice should eventually be evaluated for:
 
-A donor product is **not automatically a production supply chain**.
+- sufficient RAM for fingerprint image processing;
+- hardware cryptography;
+- protected key storage;
+- secure boot;
+- signed firmware update;
+- anti-rollback support;
+- USB device support;
+- SPI bandwidth;
+- flash capacity;
+- debugging lockout;
+- cost;
+- package manufacturability.
 
-Before designing around its internal module, determine whether:
+No MCU/SoC should be selected before the sensor data size and biometric-processing requirements are known.
 
-- the module is independently orderable;
-- it has a stable part number;
-- the manufacturer permits OEM integration;
-- its firmware is not tied to the donor vendor;
-- continued use of its USB identity is permitted.
+## 6. Benchmark device
 
-## Sources
+`3274:8012` remains a useful benchmark.
 
-- libfprint supported devices: https://fprint.freedesktop.org/supported-devices.html
+It should be treated as:
+
+```text
+REFERENCE_DEVICE
+```
+
+not:
+
+```text
+TARGET_SENSOR
+```
+
+We may still acquire one to measure:
+
+- time-to-enroll;
+- time-to-match;
+- physical UX;
+- Fedora integration;
+- suspend/resume;
+- failure behavior;
+- device-side template semantics.
+
+## 7. Phase-0A decision
+
+The immediate decision is:
+
+> Can we acquire a raw sensor with enough documentation and legal freedom to implement an open controller stack?
+
+If yes, proceed custom.
+
+If no candidate satisfies this after serious vendor outreach, reconsider using an integrated MOC module.

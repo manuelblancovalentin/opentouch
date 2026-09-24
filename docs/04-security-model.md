@@ -1,208 +1,219 @@
 # Security Model
 
-## 1. Security posture
+## 1. Security objective
 
-OpenTouch must not use “match-on-chip” as a synonym for “secure.”
+OpenTouch should control the trust boundary rather than inherit it from an opaque fingerprint module.
 
-MOC is an architectural property. Security depends on additional details:
+A raw-sensor architecture allows separate decisions about:
 
+- capture;
+- biometric processing;
+- template creation;
 - template storage;
-- raw-image handling;
-- reader firmware trust;
-- transport authentication;
-- replay resistance;
-- enrollment authorization;
-- presentation-attack resistance;
-- host behavior;
-- fallback policy.
+- matching;
+- key storage;
+- firmware trust;
+- host/device authentication.
 
-Claims must follow evidence.
-
-## 2. Assets
-
-Potentially sensitive assets:
-
-- fingerprint images;
-- fingerprint templates;
-- template identifiers/handles;
-- enrollment metadata;
-- user-to-template mapping;
-- authentication results;
-- device firmware;
-- host credentials unlocked by successful PAM authentication.
-
-## 3. Adversaries
-
-At minimum consider:
-
-- malicious local user;
-- malicious root/host;
-- malicious USB host;
-- malicious reader firmware;
-- attacker with a stolen reader;
-- attacker presenting spoofed biometric material;
-- attacker replaying captured USB traffic;
-- supply-chain attacker;
-- unauthorized enrollee.
-
-## 4. Threats
-
-### 4.1 Raw biometric exposure
-
-Questions:
-
-- Does the reader expose raw images?
-- Can a privileged host request raw images?
-- Does enrollment stream raw biometric data to the host?
-- Are debug commands capable of extracting images?
-
-For a product marketed as MOC, the desired result is that normal operation does not require host-side raw-image processing.
-
-### 4.2 Template storage
-
-Determine:
-
-- device-side vs host-side;
-- template encryption;
-- template exportability;
-- per-device keying;
-- erase semantics;
-- maximum template count;
-- multi-user mapping.
-
-“Stored on chip” does not establish that storage is encrypted or non-exportable.
-
-### 4.3 Spoofing / presentation attacks
-
-Fingerprint authentication is vulnerable to presentation attacks unless the sensor implements effective PAD/liveness mechanisms.
-
-Do not claim liveness unless the exact module has documented and preferably independently validated PAD behavior.
-
-### 4.4 Replay
-
-If the host-reader protocol merely reports “match yes/no” without authenticated freshness, traffic replay may be relevant.
-
-Questions:
-
-- challenge/response?
-- session nonce?
-- authenticated channel?
-- encrypted transport?
-- host authentication?
-- reader authentication?
-
-### 4.5 Malicious reader firmware
-
-A compromised reader could simply report successful matches.
-
-Questions:
-
-- is firmware signed?
-- is firmware updateable?
-- who controls signing?
-- can host downgrade firmware?
-- is firmware version readable?
-- can production units be locked?
-
-### 4.6 Stolen device
-
-If templates are stored on-device:
-
-- can they be extracted?
-- can the device be reset?
-- does physical possession enable offline attacks?
-- are templates useful outside that device?
-
-### 4.7 Enrollment authorization
-
-Enrollment must not become an unprivileged path to add an attacker's finger.
-
-Qualification must inspect:
-
-- fprintd policy;
-- polkit behavior;
-- local user permissions;
-- administrative enrollment for another account.
-
-### 4.8 PAM fallback
-
-Password fallback is necessary operationally but changes security behavior.
-
-Document:
-
-- timeout;
-- max fingerprint attempts;
-- whether password can be entered immediately;
-- behavior when reader is absent;
-- behavior when fprintd fails.
-
-## 5. Architecture comparison
-
-| Property | Host matching | MOC | MOC + authenticated secure channel | FIDO2 biometric authenticator |
-|---|---|---|---|---|
-| Matching location | Host | Reader | Reader | Authenticator |
-| Raw images normally required by host | Often | Ideally no | Ideally no | No for normal FIDO operation |
-| Template location | Often host | Usually reader | Reader | Authenticator |
-| Replay resistance | Protocol-dependent | Protocol-dependent | Better if designed correctly | Challenge-based FIDO protocol |
-| PAM/fprint native | Yes | Yes | Yes | Not inherently |
-| Phishing-resistant web authentication | No | No | No | Yes, if used as FIDO |
-| “Secure because biometric” | No | No | No | Still requires correct deployment |
-
-OpenTouch and a biometric FIDO key solve different problems.
-
-## 6. Security claims policy
-
-Allowed only when verified:
-
-- “match-on-chip”;
-- “templates remain on the reader during normal operation”;
-- “no proprietary host driver”;
-- “encrypted/authenticated transport”;
-- “firmware signature verification”;
-- “PAD/liveness support.”
-
-Prohibited without strong evidence:
-
-- “Touch ID-level security”;
-- “unhackable”;
-- “spoof-proof”;
-- “secure element”;
-- “biometric data can never leave the device”;
-- “anti-replay”;
-- “enterprise-grade security.”
-
-## 7. Preferred privacy architecture
-
-OpenTouch the company should not receive biometric information.
-
-Preferred model:
+## 2. Reference architecture
 
 ```text
-user
- ↓
-local reader ↔ local Linux host
+fingerprint sensor
+       ↓
+OpenTouch trusted controller
+       ├── image processing
+       ├── template creation
+       ├── template matching
+       ├── key management
+       └── secure state
+       ↓
+authenticated USB protocol
+       ↓
+Linux host
 ```
 
-No OpenTouch account.
-No biometric cloud.
-No fingerprint telemetry.
-No remote template backup.
+The security goal is **not** that the sensor itself be trusted with the whole authentication decision.
 
-This minimizes both privacy risk and legal exposure.
+## 3. Template-placement options
 
-## 8. `3274:8012` security questions
+### A. Host-side templates
 
-Before production selection, obtain answers to:
+```text
+sensor → controller → Linux → encrypted template on host
+```
 
-1. Where are enrolled templates stored?
-2. Are templates encrypted at rest?
-3. Can templates be exported?
-4. Does the host ever receive raw fingerprint images?
-5. Is USB traffic encrypted?
-6. Is it authenticated?
-7. Is replay mitigated?
-8. Does the sensor implement PAD/liveness?
-9. Is firmware signed?
-10. Can firmware be updated or downgraded?
-11. Can a malicious host force template export/debug mode?
-12. Can the module be securely factory-reset?
+Advantages:
+
+- simplest development;
+- easiest integration with existing libfprint image/minutiae machinery;
+- powerful host CPU;
+- easy debugging.
+
+Disadvantages:
+
+- compromised root/kernel may gain access to biometric material;
+- templates must be protected by host storage/key architecture;
+- difficult to claim isolation from the OS.
+
+Recommended use: early development only.
+
+### B. Device-side templates
+
+```text
+sensor → OpenTouch controller → encrypted local template store
+```
+
+Advantages:
+
+- template can remain outside Linux;
+- authentication can work through a yes/no operation;
+- consistent across hosts if desired;
+- OS compromise need not expose the stored template.
+
+Disadvantages:
+
+- controller must implement secure storage;
+- stolen-device attack becomes important;
+- multi-user mapping and lifecycle become device concerns.
+
+This is the leading production direction.
+
+### C. Host storage encrypted to device-held key
+
+```text
+encrypted template blob on Linux disk
+         ↓
+usable only by OpenTouch controller/device key
+```
+
+Advantages:
+
+- device does not need large nonvolatile storage;
+- templates remain cryptographically unusable without the authenticator;
+- easier backup/versioning mechanics if deliberately supported.
+
+Disadvantages:
+
+- rollback/replay of old encrypted blobs must be handled;
+- host can delete/copy blobs;
+- secure anti-replay counters or state may still be required on device.
+
+This architecture deserves serious evaluation.
+
+## 4. Apple as a reference, not a target to copy blindly
+
+Apple's documented architecture separates the biometric sensor from the Secure Enclave.
+
+The sensor captures fingerprint data and sends it through a protected channel. The Secure Enclave performs biometric processing, protects the template, and performs matching.
+
+Apple states that fingerprint templates are encrypted, stored on device storage, and protected by keys available only to the Secure Enclave. The OS and applications cannot access the biometric template.
+
+For built-in Touch ID, Apple documents an encrypted and authenticated connection between the sensor and Secure Enclave using per-device provisioned key material and session-key establishment.
+
+This suggests an important OpenTouch design pattern:
+
+> The raw fingerprint sensor need not itself be the secure storage device. A separate trusted controller can be the biometric-security boundary.
+
+OpenTouch should not claim equivalence with Apple's implementation. Apple's architecture includes a hardware root of trust, Secure Enclave isolation, secure boot, anti-replay mechanisms, factory sensor pairing, protected key storage, and extensive platform integration.
+
+## 5. Potential OpenTouch trust boundary
+
+A plausible long-term design is:
+
+```text
+RAW SENSOR
+  captures image
+     ↓
+OPEN TOUCH SECURE CONTROLLER
+  - authenticates sensor if possible
+  - receives image
+  - builds template
+  - performs match
+  - owns device key
+  - controls template encryption
+  - enforces enrollment authorization
+  - secure boots signed firmware
+     ↓
+LINUX
+  asks for enroll / verify / delete / status
+```
+
+Linux would not receive a raw image or template in normal production operation.
+
+## 6. Development staging
+
+### Dev stage
+
+Host-side matching is acceptable to prove:
+
+- sensor acquisition;
+- image quality;
+- PCB;
+- USB path;
+- Linux integration.
+
+### Production stage
+
+Move:
+
+- feature extraction;
+- template generation;
+- matching;
+- template protection;
+
+into the OpenTouch controller if performance and algorithm quality permit.
+
+This keeps early engineering tractable without freezing the final security model.
+
+## 7. Required properties for production
+
+Target properties:
+
+- secure boot;
+- signed updates;
+- anti-rollback;
+- hardware-backed device identity;
+- protected key material;
+- authenticated host/device protocol;
+- freshness/nonces on verification operations;
+- explicit enrollment authorization;
+- deterministic template deletion;
+- secure factory reset;
+- debug interface lifecycle control.
+
+Desired but separately validated:
+
+- sensor/controller authenticated channel;
+- PAD/liveness;
+- physical tamper resistance.
+
+## 8. Threats
+
+OpenTouch must analyze:
+
+- malicious Linux root;
+- malicious USB host;
+- malicious firmware;
+- stolen authenticator;
+- copied encrypted template storage;
+- rollback of template/state;
+- replayed verification messages;
+- unauthorized enrollment;
+- spoof fingerprint;
+- compromised sensor;
+- supply-chain substitution.
+
+## 9. Security claims policy
+
+Never infer:
+
+- liveness;
+- non-exportability;
+- anti-replay;
+- secure element;
+- encrypted sensor link;
+- firmware authenticity;
+
+merely from the presence of a capacitive sensor or local matching.
+
+Every claim requires architectural or implementation evidence.

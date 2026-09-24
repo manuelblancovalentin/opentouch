@@ -1,162 +1,117 @@
 # Project Thesis
 
-## 1. Problem statement
+## 1. Project definition
 
-Linux already has a standard fingerprint-authentication path through `libfprint`, `fprintd`, and PAM. Configuring a supported reader on Fedora is useful, but configuration alone is not a meaningful OpenTouch contribution.
+OpenTouch is an open Linux-first fingerprint authenticator built from:
 
-The product problem is instead the absence — or scarcity — of a peripheral combining all of the following:
+- a commercial raw fingerprint sensing IC/module;
+- an OpenTouch-designed PCB and controller;
+- OpenTouch firmware;
+- an explicit biometric-data/security architecture;
+- an open host protocol;
+- upstream Linux integration through `libfprint` / `fprintd` / PAM.
 
-- tiny touch-button form factor;
-- USB-C;
-- deliberate Linux support;
-- upstream `libfprint` / `fprintd`;
-- ordinary PAM integration;
-- stable and disclosed hardware identity;
-- preferably match-on-chip operation;
-- no proprietary host daemon;
-- no required cloud account;
-- reproducible hardware and Linux qualification;
-- realistic small-batch manufacture.
+The project does **not** attempt to fabricate the capacitive sensing ASIC itself.
 
-## 2. Revised product thesis
+## 2. Revised contribution
 
-The initial thesis, “a Linux fingerprint reader,” is too broad.
+The previous architecture considered productizing an existing MOC module such as USB `3274:8012`.
 
-An explicitly Linux-first external fingerprint reader already exists: ThinkPenguin's TPE-F4500 is sold for GNU/Linux and documented around the fprint stack.
+That remains useful as a benchmark, but it is no longer the preferred product architecture because it leaves critical decisions inside an opaque vendor module:
 
-Therefore the surviving product thesis is:
+- template storage;
+- transport security;
+- firmware trust;
+- enrollment semantics;
+- deletion semantics;
+- device-side matching behavior.
 
-> **OpenTouch is a tiny match-on-chip USB-C fingerprint button for Linux, using the upstream fprint stack without a proprietary host driver.**
+OpenTouch instead aims to own the system **above the sensing silicon**.
 
-The product advantage must come from **form factor, known-good hardware, reproducibility, qualification, integration quality, and support**, not merely from the existence of Linux fingerprint authentication.
+## 3. Intended architectural boundary
 
-## 3. What OpenTouch is not
+OpenTouch purchases a commercial sensor that performs the physical fingerprint measurement and exposes the resulting image or equivalent low-level biometric data.
+
+OpenTouch owns:
+
+- sensor control;
+- acquisition firmware;
+- biometric preprocessing;
+- template generation;
+- matching architecture;
+- template storage;
+- key management;
+- firmware trust;
+- host communication protocol;
+- USB integration;
+- Linux driver/integration;
+- qualification.
+
+## 4. Product thesis
+
+> **OpenTouch is an auditable Linux-first fingerprint authenticator whose electronics, firmware, protocol, biometric data model, and host integration are designed openly around a commercial fingerprint sensing IC.**
+
+## 5. Why this is materially different
+
+A polished wrapper around `3274:8012` could become a useful product quickly, but its core biometric/security architecture would remain somebody else's black box.
+
+The raw-sensor architecture creates a reusable platform that could later support:
+
+- standalone USB-C readers;
+- keyboards;
+- embedded Linux systems;
+- workstations;
+- access-control peripherals;
+- future Legatum hardware;
+- alternative sensing ICs behind a stable OpenTouch controller/protocol abstraction.
+
+## 6. Non-goals
 
 OpenTouch is not initially:
 
-- a new biometric matching algorithm;
-- a replacement for `libfprint`;
-- a replacement for `fprintd`;
-- a custom PAM framework;
-- a proprietary Linux daemon;
+- a custom CMOS fingerprint sensing ASIC;
 - a cloud biometric service;
-- a FIDO2 key;
-- a claim of Apple Touch ID-equivalent security;
-- a keyboard project.
+- a replacement for PAM;
+- a proprietary Linux daemon;
+- a FIDO2 implementation;
+- a promise of Apple-equivalent security;
+- a new fingerprint-recognition research program unless existing algorithms are insufficient.
 
-A keyboard may become a later integration target only after the standalone device is validated.
+## 7. Design principles
 
-## 4. Contribution layers
+1. **Sensor is replaceable.** Avoid coupling the whole architecture to one sensing vendor.
+2. **Protocol is documented.** Host/device behavior should be inspectable.
+3. **No biometric cloud.** Fingerprint data remains local.
+4. **Security claims follow evidence.**
+5. **Upstream first.** Avoid private libfprint/fprintd forks.
+6. **Raw-image exposure is deliberate, not accidental.**
+7. **Template ownership is explicit.**
+8. **Password fallback remains available.**
+9. **Hardware revision is fixed and disclosed.**
+10. **The reference design must remain manufacturable.**
 
-A meaningful contribution can exist at several layers.
+## 8. Success criteria
 
-### 4.1 Hardware/productization
+The project reaches architectural viability when:
 
-Potential contributions:
+- a raw commercial sensor is chosen;
+- its acquisition interface is usable without a prohibited closed host dependency;
+- the PCB/controller can acquire stable fingerprint data;
+- an end-to-end Linux prototype can enroll and verify;
+- template placement and key ownership are explicitly defined;
+- secure firmware/update architecture is specified;
+- the resulting design has a plausible BOM and sourcing path.
 
-- tiny enclosure;
-- USB-C integration;
-- carrier/custom PCB;
-- qualified fingerprint module;
-- open CAD;
-- open schematic/PCB/BOM where appropriate;
-- manufacturing test fixtures;
-- stable physical design.
+## 9. Benchmark role of `3274:8012`
 
-### 4.2 Linux integration
+USB `3274:8012` remains valuable as a reference for:
 
-Potential contributions:
+- physical size;
+- latency;
+- Linux UX;
+- MOC behavior;
+- enrollment flow;
+- template capacity;
+- practical user expectations.
 
-- distro qualification;
-- setup tooling;
-- `udev` or system integration if actually needed;
-- suspend/resume qualification;
-- login / lock / `sudo` / polkit behavior;
-- multi-user qualification;
-- diagnostics;
-- packaging/documentation.
-
-### 4.3 Upstream software
-
-Only if required:
-
-- new VID:PID support;
-- `libfprint` driver fixes;
-- `fprintd` fixes;
-- PAM/documentation fixes;
-- tests.
-
-Private forks are explicitly undesirable.
-
-### 4.4 Security architecture
-
-Potential contribution:
-
-- choose MOC where justified;
-- characterize where templates reside;
-- characterize raw-image exposure;
-- characterize transport security;
-- document replay/spoofing limitations;
-- provide a precise threat model;
-- refuse unsupported marketing claims.
-
-## 5. Product value hypothesis
-
-The commercial value need not be proprietary source code.
-
-Possible defensible value:
-
-- fixed hardware revision;
-- controlled sourcing;
-- tested VID:PID;
-- known upstream compatibility;
-- mechanical quality;
-- automated qualification;
-- distro support matrix;
-- warranty;
-- documentation;
-- fulfillment;
-- brand trust.
-
-The working hypothesis is that Linux users may pay a premium to avoid the normal fingerprint-reader failure modes:
-
-- undisclosed chipset;
-- silent hardware revisions;
-- vendor Windows-only software;
-- unsupported hardware IDs;
-- abandoned proprietary drivers;
-- inconsistent PAM/desktop behavior.
-
-## 6. Success criteria
-
-OpenTouch should not be called a viable product until all of the following are true:
-
-1. A specific sensor/module is identifiable by exact model and hardware ID.
-2. The module is legally and repeatably sourceable.
-3. Upstream Linux support is verified for the exact hardware.
-4. Stock-distribution support status is known separately from upstream support.
-5. Enrollment and verification are reliable.
-6. Login, lock screen, `sudo`, polkit, multi-user behavior, hotplug, and suspend/resume are tested.
-7. The security architecture is documented without unsupported claims.
-8. A custom physical design can be built without a proprietary host stack.
-9. Landed COGS supports a plausible enthusiast retail price.
-10. Compliance and vendor-ID issues are understood before commercial sale.
-
-## 7. Kill criteria
-
-The current architecture should be abandoned or changed if:
-
-- the selected module cannot be sourced under sane terms;
-- the module's identity or firmware changes unpredictably;
-- Linux operation requires a proprietary host driver;
-- reliability is materially worse than password fallback expectations;
-- security behavior cannot be characterized enough to market honestly;
-- a stable product requires a private `libfprint` fork;
-- landed cost forces a retail price with no plausible market;
-- support burden overwhelms the value of the product.
-
-## 8. Current central question
-
-The next project question is deliberately narrow:
-
-> **What exactly is USB `3274:8012`, who makes the underlying module, how can it be sourced, and how does it behave on current Fedora/upstream libfprint?**
+It is no longer the presumed OpenTouch production module.

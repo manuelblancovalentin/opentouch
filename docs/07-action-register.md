@@ -1,313 +1,260 @@
 # Action Register
 
-This file is the ordered working queue.
+Statuses: `TODO`, `IN PROGRESS`, `BLOCKED`, `DONE`, `DROPPED`
 
-Statuses:
-
-- `TODO`
-- `IN PROGRESS`
-- `BLOCKED`
-- `DONE`
-- `DROPPED`
-
-Priorities:
-
-- `P0` — blocks current project decision;
-- `P1` — next-stage critical;
-- `P2` — useful but non-blocking;
-- `P3` — later.
+Priorities: `P0`, `P1`, `P2`, `P3`
 
 ---
 
-## OT-0001 — Resolve the exact `3274:8012` hardware
+## OT-0001 — Raw sensor feasibility scan
 
 **Priority:** P0  
 **Status:** TODO  
-**Phase:** 0
+**Phase:** 0A
 
-### Question
+Evaluate exact raw commercial fingerprint sensors.
 
-What exact Microarray/MAFP sensor or module enumerates as USB `3274:8012`, and can it support an actual OpenTouch product?
+Initial families:
 
-### Required outputs
+- Fingerprint Cards FPC1020 / FPC1024 / FPC1025;
+- Goodix GF3988 / GF5288 / GF3258 / GF3626;
+- additional candidates if superior.
 
-#### Identity
+For every candidate collect:
 
-- manufacturer legal name;
-- sensor/module part number;
-- module marking;
-- USB descriptor strings;
-- VID owner;
-- PID assignment;
-- photographs/teardowns;
-- known retail products using the exact ID.
-
-#### Linux
-
-- libfprint driver name/path;
-- commit/MR adding support;
-- merge date;
-- first release containing support;
-- Fedora 43/44/45 package inclusion;
-- known bugs;
-- fprintd behavior;
-- template-storage behavior exposed through libfprint.
-
-#### Electrical/mechanical
-
+- exact P/N;
+- public datasheet;
+- image resolution;
 - dimensions;
-- interface;
-- voltage/current;
-- connector;
-- pinout;
-- sensor active area;
-- carrier requirements;
-- ESD requirements.
-
-#### Security
-
-- MOC confirmation from primary source;
-- template location;
-- template exportability;
-- raw-image exposure;
-- firmware update/security model;
-- USB transport authentication/encryption;
-- replay protections;
-- PAD/liveness claims.
-
-#### Sourcing
-
-- manufacturer sales contact;
-- sample availability;
-- distributor(s);
+- SPI/electrical details;
+- raw-frame accessibility;
+- required firmware;
+- required SDK;
+- NDA restrictions;
+- permission to publish open firmware/driver;
+- distributor/sample path;
 - MOQ;
-- 10 / 100 / 1k pricing;
-- lead time;
-- lifecycle status;
-- NDA requirements;
-- production availability.
-
-#### Product/legal
-
-- can an OEM ship the complete USB module under `3274:8012`?
-- would OpenTouch need its own VID/PID?
-- can firmware be redistributed?
-- are vendor binaries required?
-- are there branding/licensing constraints?
+- prototype cost;
+- 100/1k pricing;
+- lifecycle.
 
 ### Decision
 
-At completion classify it as one of:
+Each candidate receives:
 
-- `V0_ONLY` — useful donor/proof-of-concept, unsuitable for production;
-- `V1_CANDIDATE` — credible production path;
-- `REJECTED` — do not build around it.
+- `OPEN_DEV_CANDIDATE`
+- `CLOSED_SDK_ONLY`
+- `PROCUREMENT_RISK`
+- `REJECTED`
 
 ---
 
-## OT-0002 — Acquire a verified `3274:8012` donor
+## OT-0002 — Select OpenTouch development sensor
 
 **Priority:** P0  
-**Status:** BLOCKED by OT-0001 product identification  
-**Phase:** 1
+**Status:** BLOCKED by OT-0001
 
-Requirements:
+Selection requires:
 
-- seller or independent evidence shows exact VID:PID;
-- avoid listings identified only by enclosure/photo;
-- retain invoice/listing/revision evidence.
+- accessible raw/low-level sensor data;
+- open implementation legally possible;
+- prototype units obtainable;
+- sane electrical integration;
+- plausible production path.
 
-After arrival:
+---
 
-```bash
-lsusb
-lsusb -v -d 3274:8012
+## OT-0003 — Select controller-development platform
+
+**Priority:** P0  
+**Status:** BLOCKED by OT-0002
+
+Do not select MCU solely by intuition.
+
+Requirements depend on:
+
+- image dimensions;
+- buffering;
+- preprocessing;
+- matcher;
+- secure-storage plan.
+
+Evaluate:
+
+- RAM;
+- flash;
+- USB;
+- SPI throughput;
+- crypto accelerators;
+- secure boot;
+- key storage;
+- anti-rollback;
+- debug lifecycle;
+- price.
+
+---
+
+## OT-0004 — Decide biometric data architecture
+
+**Priority:** P0  
+**Status:** IN PROGRESS
+
+Use `09-biometric-data-architecture.md`.
+
+Resolve:
+
+- development host matching;
+- production device matching;
+- template storage model;
+- root-key location;
+- encrypted host blob vs device NVM;
+- host binding vs portability;
+- enrollment authorization;
+- reset/recovery.
+
+---
+
+## OT-0005 — Acquire `3274:8012` benchmark
+
+**Priority:** P1  
+**Status:** TODO
+
+Purpose is benchmark/reference only.
+
+Measure:
+
+- physical design;
+- Fedora behavior;
+- latency;
+- enrollment;
+- match UX;
+- suspend/resume;
+- multi-user behavior.
+
+Do not treat its architecture as OpenTouch's target.
+
+---
+
+## OT-0006 — Capture first raw fingerprint frame
+
+**Priority:** P0  
+**Status:** BLOCKED by OT-0002/0003
+
+Deliverables:
+
+- sensor bring-up;
+- deterministic initialization;
+- raw frame dump;
+- metadata;
+- acquisition timing;
+- image visualization;
+- repeated-frame test.
+
+---
+
+## OT-0007 — Build host-matching Linux prototype
+
+**Priority:** P0  
+**Status:** BLOCKED by OT-0006
+
+Architecture:
+
+```text
+raw sensor → controller → USB → libfprint host image path
 ```
-
-Archive descriptors.
-
----
-
-## OT-0003 — Establish Fedora baseline
-
-**Priority:** P0  
-**Status:** TODO after hardware acquisition  
-**Phase:** 1
-
-Record:
-
-```bash
-cat /etc/fedora-release
-rpm -q libfprint fprintd
-fprintd-list "$USER"
-```
-
-Test stock packaged stack before installing anything custom.
-
-If stock Fedora fails, distinguish:
-
-- unsupported packaged version;
-- permissions/policy issue;
-- driver bug;
-- device/firmware issue.
-
----
-
-## OT-0004 — Test current upstream libfprint
-
-**Priority:** P0  
-**Status:** TODO if stock package fails or for comparison  
-**Phase:** 1
 
 Goal:
 
-Determine whether current upstream support actually works on the acquired exact hardware.
-
-Do not replace the system stack blindly. Use a controlled development/test environment where practical.
-
-Record:
-
-- exact commit;
-- build options;
-- detection;
-- enrollment;
-- verify;
-- error logs.
+Prove hardware and Linux integration before embedded matching.
 
 ---
 
-## OT-0005 — Run functional qualification
+## OT-0008 — Evaluate biometric algorithm path
 
 **Priority:** P1  
-**Status:** TODO  
-**Phase:** 1
+**Status:** TODO after raw images exist
+
+Compare:
+
+- libfprint image/minutiae path;
+- NBIS;
+- SourceAFIS concepts/implementations;
+- vendor algorithms if legally useful;
+- custom embedded implementation only if necessary.
+
+Criteria:
+
+- accuracy;
+- memory;
+- compute;
+- license;
+- embedded suitability;
+- template format;
+- auditability.
+
+---
+
+## OT-0009 — Prototype secure template storage
+
+**Priority:** P1  
+**Status:** BLOCKED by OT-0008
+
+Compare:
+
+1. controller-local encrypted NVM;
+2. encrypted Linux-hosted blobs bound to device key.
 
 Test:
 
+- key loss;
+- rollback;
+- deletion;
+- reset;
+- cross-device substitution;
+- cross-user substitution.
+
+---
+
+## OT-0010 — Define production host protocol
+
+**Priority:** P1  
+**Status:** BLOCKED by security architecture
+
+Protocol must eventually support at minimum:
+
+- capability query;
 - enrollment;
-- repeated verification;
-- GNOME Settings;
-- GDM;
-- GNOME lock screen;
-- `sudo`;
-- polkit;
-- password fallback;
-- failed fingerprint;
-- multi-user;
-- hotplug;
-- boot attached/detached;
-- suspend/resume;
-- service restart.
+- verify;
+- list credential identifiers;
+- delete;
+- reset;
+- firmware/version state.
 
-Create a reproducible result table.
+Security design must include:
+
+- authenticated messages;
+- freshness;
+- versioning;
+- error semantics.
 
 ---
 
-## OT-0006 — Run preliminary reliability campaign
+## OT-0011 — Build compact OpenTouch PCB
 
 **Priority:** P1  
-**Status:** TODO  
-**Phase:** 1
+**Status:** BLOCKED by sensor/controller validation
 
-Collect enough observations to compare usage quality, not to claim formal biometric FAR/FRR.
+Only begin after development hardware proves:
 
-Record:
-
-- touch latency;
-- retries;
-- failures;
-- finger orientation;
-- dry/damp finger;
-- post-resume first touch;
-- long-idle first touch.
+- image quality;
+- Linux path;
+- power requirements;
+- controller sizing.
 
 ---
 
-## OT-0007 — Teardown donor
+# Immediate next action
 
-**Priority:** P1  
-**Status:** TODO after initial qualification  
-**Phase:** 2
+**OT-0001 — Raw sensor feasibility scan.**
 
-Goals:
-
-- photograph PCB;
-- record all markings;
-- identify sensor/module;
-- identify controllers/passives;
-- determine whether module is native USB;
-- identify connector/pinout if possible;
-- compare with vendor information.
-
-Preserve the donor if destructive teardown is unnecessary.
-
----
-
-## OT-0008 — Contact Microarray
-
-**Priority:** P0/P1  
-**Status:** TODO as soon as exact identity is sufficient  
-**Phase:** 0
-
-Request:
-
-- exact part number;
-- datasheet;
-- mechanical drawing;
-- electrical interface;
-- sample;
-- MOQ;
-- tier pricing;
-- lead time;
-- lifecycle;
-- MOC architecture documentation;
-- template-storage/security documentation;
-- firmware policy;
-- USB VID/PID OEM policy;
-- Linux/open-source integration permission;
-- NDA requirements.
-
----
-
-## OT-0009 — Characterize second-source candidate
-
-**Priority:** P1  
-**Status:** TODO  
-**Phase:** 0
-
-Goal:
-
-Avoid making the entire project dependent on Microarray.
-
-Preferred output: one alternative module with exact part number, upstream path, samples, documentation, and pricing.
-
----
-
-## OT-0010 — Decide v1 architecture
-
-**Priority:** P0 gate  
-**Status:** BLOCKED by OT-0001, OT-0005, OT-0008, OT-0009  
-**Phase:** 2/3
-
-Decision document must answer:
-
-- chosen module;
-- source;
-- why;
-- native USB vs intermediate MCU;
-- USB identity;
-- template/security model;
-- target BOM;
-- fallback supplier.
-
-Only after this action is complete should a custom OpenTouch PCB become the primary engineering task.
-
----
-
-# Immediate next session
-
-Start with **OT-0001**.
-
-The goal is not yet to purchase “something that probably contains Microarray.”
-
-The goal is to establish the exact identity and supply chain of `3274:8012` strongly enough that the first purchase is an instrumented engineering decision rather than a marketplace guess.
+The project is now committed to the raw-sensor/custom-controller direction unless the market scan establishes that no practical sensor can be openly integrated.

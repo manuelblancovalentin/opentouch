@@ -222,3 +222,33 @@ Reconsider the product if:
 - USB-IF developer information: https://www.usb.org/developers
 - USB-IF logo licensing: https://www.usb.org/logo-license
 - Illinois BIPA statute: https://www.ilga.gov/legislation/ilcs/fulltext.asp?DocName=074000140K10
+
+
+## 10. Revised commercial architecture
+
+OpenTouch has selected the raw-sensor/custom-controller direction as its target architecture.
+
+Commercial implications:
+
+### Advantages
+
+- stronger technical differentiation;
+- reusable controller/platform across multiple products;
+- less dependence on one opaque USB MOC supplier;
+- ability to second-source sensing ICs behind an OpenTouch abstraction;
+- control over security/data architecture;
+- stronger open-source/community contribution;
+- potential future OEM/reference-design value.
+
+### Costs
+
+- longer development cycle;
+- higher firmware/software effort;
+- biometric algorithm qualification;
+- controller/secure-storage complexity;
+- new libfprint integration;
+- higher engineering risk.
+
+Near-term revenue may be worse than simply packaging an existing MOC module. The decision is justified by long-term platform value rather than minimum time-to-market.
+
+A benchmark `3274:8012` unit may still be purchased for comparison.

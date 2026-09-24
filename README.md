@@ -1,61 +1,79 @@
 # OpenTouch
 
-> A tiny match-on-chip USB-C fingerprint button for Linux, built around upstream `libfprint` / `fprintd` and PAM, without a proprietary host driver.
+> An open Linux-first fingerprint authenticator built from a raw commercial fingerprint sensor, an OpenTouch-designed controller/PCB, and an upstream Linux integration path.
 
-OpenTouch is an open-source hardware/productization project. It is **not** an attempt to invent fingerprint authentication for Linux. The Linux software stack already exists:
+OpenTouch is now committed to a **raw-sensor architecture** rather than productizing an opaque match-on-chip USB module as the final design.
+
+The intended stack is:
 
 ```text
-fingerprint hardware
-    ↓
-libfprint
-    ↓
-fprintd
-    ↓
-pam_fprintd
-    ↓
-sudo / login / lock screen / other PAM consumers
+finger
+  ↓
+commercial capacitive fingerprint sensor
+  ↓  SPI / documented sensor interface
+OpenTouch controller
+  ├── acquisition
+  ├── image conditioning
+  ├── feature/template generation
+  ├── matching
+  ├── secure template storage
+  ├── secure boot / signed firmware
+  └── authenticated USB protocol
+  ↓
+USB-C
+  ↓
+libfprint / fprintd / PAM
+  ↓
+Linux
 ```
 
-The project asks a narrower question:
+The `3274:8012` Microarray device remains useful as a **benchmark/reference device**, not the target architecture.
 
-> Can that stack be packaged into a tiny, polished, reliable, Linux-first USB-C fingerprint button using stable, upstream-supported hardware?
+## Why this direction
 
-## Current project thesis
+The raw-sensor approach allows OpenTouch to define:
 
-The broad product category already exists. ThinkPenguin sells an explicitly GNU/Linux-oriented external fingerprint reader that works through the fprint stack. Therefore the defensible OpenTouch gap is **not** “a fingerprint reader for Linux.”
+- where fingerprint templates are stored;
+- how they are encrypted;
+- whether raw images ever leave the device;
+- how enrollment is authorized;
+- how host↔device communication is authenticated;
+- firmware trust and update policy;
+- anti-rollback behavior;
+- multi-user semantics;
+- template deletion/reset semantics;
+- the public USB protocol;
+- the upstream Linux integration.
 
-The current target is instead:
-
-- tiny touch-button form factor;
-- USB-C;
-- preferably match-on-chip (MOC);
-- upstream `libfprint` support;
-- no proprietary Linux daemon or private driver fork;
-- fixed, documented hardware identity;
-- reproducible Linux qualification;
-- consumer-quality enclosure and UX;
-- sourceable enough to become a small-batch product.
-
-The current leading hardware lead is USB VID:PID **`3274:8012`**, exposed upstream as the **MAFP MOC Fingerprint Sensor**.
+This makes OpenTouch an open biometric peripheral architecture rather than a Linux wrapper around another vendor's authenticator.
 
 ## Documentation
 
-- [`docs/00-project-thesis.md`](docs/00-project-thesis.md) — scope, gap, non-goals, success criteria
-- [`docs/01-linux-stack.md`](docs/01-linux-stack.md) — Linux software baseline and integration model
-- [`docs/02-competitive-landscape.md`](docs/02-competitive-landscape.md) — existing products and the surviving gap
-- [`docs/03-hardware-survey.md`](docs/03-hardware-survey.md) — sensor/module candidates and qualification rules
-- [`docs/04-security-model.md`](docs/04-security-model.md) — threat model and security claims policy
-- [`docs/05-commercial-compliance.md`](docs/05-commercial-compliance.md) — open-source boundary, economics, compliance
-- [`docs/06-roadmap.md`](docs/06-roadmap.md) — phases, milestones, and exit criteria
-- [`docs/07-action-register.md`](docs/07-action-register.md) — ordered actionable work
-- [`docs/08-sources.md`](docs/08-sources.md) — research sources and claim mapping
+- [`docs/00-project-thesis.md`](docs/00-project-thesis.md) — revised project thesis and scope
+- [`docs/01-linux-stack.md`](docs/01-linux-stack.md) — Linux software baseline
+- [`docs/02-competitive-landscape.md`](docs/02-competitive-landscape.md) — product landscape
+- [`docs/03-hardware-survey.md`](docs/03-hardware-survey.md) — raw-sensor selection strategy
+- [`docs/04-security-model.md`](docs/04-security-model.md) — threat model
+- [`docs/05-commercial-compliance.md`](docs/05-commercial-compliance.md) — commercial/open-source boundary
+- [`docs/06-roadmap.md`](docs/06-roadmap.md) — revised roadmap
+- [`docs/07-action-register.md`](docs/07-action-register.md) — current engineering queue
+- [`docs/08-sources.md`](docs/08-sources.md) — research/source ledger
+- [`docs/09-biometric-data-architecture.md`](docs/09-biometric-data-architecture.md) — template placement, secure storage, and Apple comparison
 
-## Current status
+## Current project gate
 
-**Phase 0 — Research / feasibility**
+**Phase 0A — raw-sensor feasibility**
 
-The immediate project gate is:
+Before committing PCB design effort, identify at least one commercial fingerprint sensor that:
 
-> Determine exactly what `3274:8012` is, whether a stable OEM module can be sourced, and whether it behaves acceptably with current upstream Linux software.
+1. provides raw or sufficiently low-level fingerprint access;
+2. is documented enough to integrate without a proprietary host daemon;
+3. is legally usable with an open firmware/driver stack;
+4. is sourceable in prototype and production quantities;
+5. has acceptable lifecycle and mechanical characteristics.
 
-No custom PCB should be started before that gate is resolved.
+Primary candidates currently include Fingerprint Cards access sensors and Goodix capacitive SPI sensors.
+
+The next architecture decision is **not** "Microarray or custom PCB." The project has already chosen the custom-controller path. The next decision is:
+
+> Which raw commercial sensor gives OpenTouch enough technical and legal control to build the rest of the stack openly?
