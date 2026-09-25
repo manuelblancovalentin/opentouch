@@ -1,3 +1,5 @@
+![logo](static/logo.jpg)
+
 # OpenTouch
 
 > An open Linux-first fingerprint authenticator built from a raw commercial fingerprint sensor, an OpenTouch-designed controller/PCB, and an upstream Linux integration path.
